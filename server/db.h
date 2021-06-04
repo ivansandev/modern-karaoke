@@ -37,4 +37,11 @@ int db_add_missing_songs();
 
 void db_download_missing_songs();
 
+void show_all_songs();
+void show_missing_songs();
+
+
+static int callback_missing_songs(void *NotUsed, int argc, char **argv, char **azColName);
+int db_get_missing_songs();
+
 #endif /* DB_MODULE */

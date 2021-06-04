@@ -5,9 +5,9 @@ import sys
 
 ADDR = "127.0.0.1"
 PORT = 8080
+PACKAGE_LEN = 1024
 
-# Messages
-MAX_CLIENT_MSG = 1000
+# Server Response Status
 ERROR_MSG            = "ERROR"
 SONG_UNAVAILABLE_MSG = "SNGNA"
 SONG_REQUESTED_MSG   = "SNGOK"
@@ -15,7 +15,13 @@ SONG_REQUESTED_MSG   = "SNGOK"
 def main():
     request_song("animals", "martin garrix")
 
-def request_song(title, artist) -> bool:
+def recv_ok(s):
+    msg = s.recv(2, 0).decode()
+    if msg != "OK":
+        return False
+    return True
+
+def request_song(title, artist) -> int:
     if not title or title == "" or not artist or artist == "":
         return -2
     try:
@@ -26,17 +32,25 @@ def request_song(title, artist) -> bool:
             status = s.connect((ADDR, PORT))
 
             # Send type of request
+            print("DEBUG: Sending request type")
             s.send(str.encode("REQUEST\0"), 0)
-            time.sleep(0.01)
+            # time.sleep(0.01)
+            if not recv_ok(s):
+                print("OK not received")
 
             # Send title
+            print("DEBUG: Sending song title")
             s.send(str.encode(title))
-            time.sleep(0.01)
+            # time.sleep(0.01)
+            if not recv_ok(s):
+                print("OK not received")
 
             # Send artist
+            print("DEBUG: Sending song artist")
             s.send(str.encode(artist))
-            time.sleep(0.01)
-
+            # time.sleep(0.01)
+            if not recv_ok(s):
+                print("OK not received")
 
             # Get response
             msg = s.recv(5, 0).decode()

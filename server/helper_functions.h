@@ -36,4 +36,9 @@ static int get_line(char *prmpt, char *buff, size_t sz)
     return OK;
 }
 
+void send_ok(int sockfd)
+{
+    send(sockfd, "OK", 2, 0);
+}
+
 #endif /* HELPER_MODULE */

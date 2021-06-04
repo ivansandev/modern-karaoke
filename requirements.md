@@ -54,18 +54,28 @@ Possibilities:
 
 # To-Do:
 ## Client
-[ ] GUI in Python
+[x] GUI in Python
 ## Server
-[ ] Proper TDP socket (server & client)
+[x] Proper TDP socket (server & client)
+	[x] Fix bug where recv message cannot keep up with client's sending speed --> implemented OK message
 [ ] Implement encoding/decoding of message requests
-[ ] Update server with mutex
+[x] Update server with mutex
 [ ] Implement signals
-[ ] Player thread (started on start_party, stopped on end_party/signal)
+[ ] Player thread/process (started on start_party, stopped on end_party/signal)
+	--> Create process when party starts, and a signal handler in it, which is gonna end all threads/sockets
 [ ] Menu functionalities:
 	[ ] Show all available songs
 	[ ] Show requests
 	[ ] Show missing songs
-
+[ ] Count client connections and share between threads so that a thread can decrease the number when it ends
 
 # Testing:
-[ ] Multiple users requesting at once
+[x] Multiple users requesting at once
+
+
+# Questions:
+[ ] Is it better to create a socket connection when client opens the app or a new socket connection for every request?
+[ ] Why does the server not get all the messages through the socket when the client sends them without waiting?
+
+## Additional - Would be useful for now_playing
+SELECT * FROM query_playlist ORDER BY created_at ASC;

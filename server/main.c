@@ -31,7 +31,8 @@
 int PARTY_STARTED = 0;
 // pthread_cond_t PARTY_STARTED = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
-
+int sockfd = 0;
+pthread_t clients_con[MAX_CLIENTS];
 
 void clearBuffer(char *buf, int charlen)
 {
@@ -40,11 +41,19 @@ void clearBuffer(char *buf, int charlen)
         buf[i] = '\0';
 }
 
-void sig_handler(int signum)
+void handle_sigint(int signum)
 {
     /*
     Takes care when the server stops, to kill all threads and close all client socket conections.
     */
+    printf("\nParty ending!\n");
+    PARTY_STARTED = 0;
+    int i=0;
+    for (i=0; i< MAX_CLIENTS; i++)
+    {
+        pthread_exit(clients_con[i]);
+    }
+    close(sockfd);
 }
 
 void *clientThread(void *arg)
@@ -52,42 +61,42 @@ void *clientThread(void *arg)
     char msg[PACKAGE_LEN];
     int sockfd = *((int *)arg);
 
-    Song song_request;
-
     // Client's initial message request can be:
     //       - Song request
     //       - Now playing
     //       - Disconnect
 
-    // TODO: Handshake client
-    /*
-    recv(sockfd, msg, PACKAGE_LEN, 0);
-    if (strcmp(msg, HANDSHAKE) != 0)
-    {
-        printf("Handshake failed.");
-        return;
-    }
-    clearBuffer(msg, PACKAGE_LEN);
-    */
-
     // Receive what kind of request does the client have
-    recv(sockfd, msg, PACKAGE_LEN, 0);
+    printf("-> DEBUG: Receive request type\n");
+    if (recv(sockfd, msg, PACKAGE_LEN, 0) == 0)
+    {
+        // Close connection
+        close(sockfd);
+        return 0;
+    }
+
+    send_ok(sockfd);
 
     // SONG REQUEST
     if (strcmp(msg, "REQUEST") == 0)
     {
-        // SONG NAME
+        Song song_request;
+        // RECEIVE SONG TITLE
         clearBuffer(msg, PACKAGE_LEN);
+        printf("-> DEBUG: Receive song title\n");
         recv(sockfd, msg, PACKAGE_LEN, 0);
         strcpy(song_request.title, msg);
         clearBuffer(msg, PACKAGE_LEN);
+        send_ok(sockfd);
 
-        // SONG AUTHOR
+        // RECEIVE SONG ARTIST
+        printf("-> DEBUG: Receive song artist\n");
         recv(sockfd, msg, PACKAGE_LEN, 0);
         strcpy(song_request.artist, msg);
         clearBuffer(msg, PACKAGE_LEN);
+        send_ok(sockfd);
 
-        printf("Requesting song '%s' by '%s'\n", song_request.title, song_request.artist);
+        printf("Song requested: %s - %s\n", song_request.title, song_request.artist);
         pthread_mutex_lock(&mtx);
         int requested = request_song(song_request);
         pthread_mutex_unlock(&mtx);
@@ -128,7 +137,7 @@ void *clientThread(void *arg)
     return 0;
 }
 
-void start_party(int sockfd, struct sockaddr_in *server_addr)
+void start_party(struct sockaddr_in *server_addr)
 {
     // Bind the address struct to the socket
     if (bind(sockfd, (struct sockaddr *)server_addr, sizeof(*server_addr)) != 0)
@@ -142,11 +151,13 @@ void start_party(int sockfd, struct sockaddr_in *server_addr)
         return;
     }
 
-    pthread_t clients_con[MAX_CLIENTS];
     int i = 0;
     while (1)
     {
-        // accept call is creating a new socket for upcoming connection
+        // TODO: Decrease number of connections when a client disconnects and vice versa
+        // TODO: Make clients_con into a list, so that deleting / appending can be optimized
+
+        // Create socket + thread for every connection
         socklen_t addr_size = sizeof server_addr;
         int clientSocket = accept(sockfd, (struct sockaddr *)&server_addr, &addr_size);
 
@@ -157,16 +168,17 @@ void start_party(int sockfd, struct sockaddr_in *server_addr)
 
 void download_missing_songs()
 {
-    db_download_missing_songs();
+    db_get_missing_songs();
 }
 
 int main()
 {
+    signal(SIGINT, handle_sigint);
     // SOCKET PREREQUISITES / CONFIGURATION
     // -------------------------------------------------------
     initialize_db_tables();
 
-    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd == 0)
         perror("\nCannot create socket for listening.\n");
 
@@ -177,6 +189,7 @@ int main()
     server_addr.sin_port = htons(PORT);            // port
     server_addr.sin_addr.s_addr = inet_addr(ADDR); // INADDR_ANY
     memset(server_addr.sin_zero, '\0', sizeof server_addr.sin_zero);
+    setsockopt(sockfd,SOL_SOCKET,SO_REUSEADDR,1,sizeof(int));
 
     // -------------------------------------------------------
     // MAIN MENU
@@ -186,6 +199,7 @@ int main()
         if (PARTY_STARTED)
         {
             printf("\t1.End party\n");
+            printf("\t2. Show requested songs\n");
         }
         else
         {
@@ -193,6 +207,7 @@ int main()
             printf("\t2. Add new song\n");
             printf("\t3. Add requested missing songs\n");
             printf("\t4. Show missing songs\n");
+            printf("\t5. Show all songs\n");
 
             printf("Choice: ");
             short choice;
@@ -207,7 +222,7 @@ int main()
                 // Start listening on PORT when party starts (TODO: in a new process)
                 printf("Party started!");
                 start_player();
-                start_party(sockfd, &server_addr);
+                start_party(&server_addr);
                 break;
             case 2:
                 // Add new song logic;
@@ -222,7 +237,10 @@ int main()
                 download_missing_songs();
                 break;
             case 4:
-                // TODO
+                show_missing_songs();
+                break;
+            case 5:
+                show_all_songs();
                 break;
             default:
                 printf("\nWrong choice!\n");

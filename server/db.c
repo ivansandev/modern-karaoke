@@ -10,11 +10,76 @@ static int callback(void *NotUsed, int argc, char **argv, char **azColName)
     int i;
     for (i = 0; i < argc; i++)
     {
-        printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
+        //printf("%s = %s \t ", azColName[i], argv[i] ? argv[i] : "NULL");
+        printf("%s\t\t\t", argv[i] ? argv[i] : "NULL");
     }
     printf("\n");
     return 0;
 }
+
+typedef struct SongsMissing {
+    Song *songs;
+    int songs_missing;
+} SongsMissing;
+
+static int callback_missing_songs(void *songs_missing_all, int argc, char **argv, char **azColName)
+{
+    int i;
+    SongsMissing *songs = (SongsMissing*)songs_missing_all;
+    for (i = 0; i < argc; i++)
+    {
+        if (i % 2 == 0)
+        {
+            strcpy(songs->songs[i].title, argv[i]);
+        }
+        else
+        {
+            strcpy(songs->songs[i].artist, argv[i]);
+            songs->songs_missing++;
+        }
+    }
+    return 0;
+}
+
+int db_get_missing_songs()
+{
+    sqlite3 *db;
+    int rc = sqlite3_open(DB_FILENAME, &db);
+    Song songs[50];
+    SongsMissing songs_missing = {
+        .songs = songs,
+        .songs_missing = 0,
+    };
+    if (rc)
+    {
+        fprintf(stderr, "Cannot open DB: %s\n", sqlite3_errmsg(db));
+        sqlite3_close(db);
+        return -1;
+    }
+
+    char *err; // SQL execution error message
+    rc = sqlite3_exec(db, "SELECT title, artist FROM " MISSING_TABLE, callback_missing_songs, &songs_missing, &err);
+
+    if (rc != SQLITE_OK)
+    {
+        fprintf(stderr, "SQL execution error: %s\n", err);
+        sqlite3_free(err);
+        sqlite3_close(db);
+        return 1;
+    }
+
+    int i = 0;
+    for (i=0; i<50; i++)
+    {
+        if (songs[i].title == NULL)
+            break;
+        db_add_song(songs[i], MUSIC_TABLE);
+    }
+
+    sqlite3_close(db);
+    return 0;
+}
+
 
 int db_execute(char *query)
 {
@@ -194,4 +259,18 @@ int db_add_song(struct Song song, char *db_table)
 void db_download_missing_songs()
 {
 
+}
+
+void show_missing_songs()
+{
+    printf("--------- MISSING SONGS ---------\n");
+    db_execute("SELECT * FROM " MISSING_TABLE);
+    printf("---------------------------------\n");
+}
+
+void show_all_songs()
+{
+    printf("--------- ALL SONGS ---------\n");
+    db_execute("SELECT * FROM " MUSIC_TABLE);
+    printf("-----------------------------\n");
 }
