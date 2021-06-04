@@ -1,1 +1,1 @@
-gcc main.c db.c sqlite/sqlite3.c -o out && ./out
+gcc -Wall -pthread main.c db.c player.c sqlite/sqlite3.c -lpthread -o out && ./out

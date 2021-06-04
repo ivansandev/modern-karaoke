@@ -15,31 +15,23 @@
 #include "db.h"
 #include "helper_functions.h"
 #include "client_requests.h"
+#include "player.h"
 
-#define PORT 8080
-#define NET_BUF_SIZE 128
 #define ADDR "127.0.0.1"
+#define PORT 8080
 #define MAX_CLIENTS 100
-#define MAX_CLIENT_MSG 1000
+#define PACKAGE_LEN 1024
 
-#define MUSIC_TABLE "song_collection"
-#define MISSING_TABLE "missing_songs"
-#define QUERY_TABLE "query_playlist"
-
+// RESPONSES FOR CLIENT'S REQUEST
 #define ERROR_MSG "ERROR"
 #define SONG_UNAVAILABLE_MSG "SNGNA"
 #define SONG_REQUESTED_MSG "SNGOK"
+
 
 int PARTY_STARTED = 0;
 // pthread_cond_t PARTY_STARTED = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
 
-// typedef struct Song
-// {
-//     char title[100];
-//     char artist[100];
-//     float length;
-// } Song;
 
 void clearBuffer(char *buf, int charlen)
 {
@@ -50,40 +42,55 @@ void clearBuffer(char *buf, int charlen)
 
 void sig_handler(int signum)
 {
-
+    /*
+    Takes care when the server stops, to kill all threads and close all client socket conections.
+    */
 }
 
 void *clientThread(void *arg)
 {
-    char msg[MAX_CLIENT_MSG];
+    char msg[PACKAGE_LEN];
     int sockfd = *((int *)arg);
 
     Song song_request;
 
-    // message request
-    // TODO: Check request type
+    // Client's initial message request can be:
     //       - Song request
     //       - Now playing
     //       - Disconnect
 
-    recv(sockfd, msg, MAX_CLIENT_MSG, 0);
-    printf("MESSAGE: %s\n", msg);
+    // TODO: Handshake client
+    /*
+    recv(sockfd, msg, PACKAGE_LEN, 0);
+    if (strcmp(msg, HANDSHAKE) != 0)
+    {
+        printf("Handshake failed.");
+        return;
+    }
+    clearBuffer(msg, PACKAGE_LEN);
+    */
+
+    // Receive what kind of request does the client have
+    recv(sockfd, msg, PACKAGE_LEN, 0);
+
+    // SONG REQUEST
     if (strcmp(msg, "REQUEST") == 0)
     {
-        clearBuffer(msg, MAX_CLIENT_MSG);
-        // REQUEST: Song request
         // SONG NAME
-        recv(sockfd, msg, MAX_CLIENT_MSG, 0);
+        clearBuffer(msg, PACKAGE_LEN);
+        recv(sockfd, msg, PACKAGE_LEN, 0);
         strcpy(song_request.title, msg);
-        clearBuffer(msg, MAX_CLIENT_MSG);
+        clearBuffer(msg, PACKAGE_LEN);
 
         // SONG AUTHOR
-        recv(sockfd, msg, MAX_CLIENT_MSG, 0);
+        recv(sockfd, msg, PACKAGE_LEN, 0);
         strcpy(song_request.artist, msg);
-        clearBuffer(msg, MAX_CLIENT_MSG);
+        clearBuffer(msg, PACKAGE_LEN);
 
         printf("Requesting song '%s' by '%s'\n", song_request.title, song_request.artist);
+        pthread_mutex_lock(&mtx);
         int requested = request_song(song_request);
+        pthread_mutex_unlock(&mtx);
         if (requested < -1)
         {
             // send: Error
@@ -103,24 +110,25 @@ void *clientThread(void *arg)
     else if (strcmp(msg, "NOW") == 0)
     {
         // REQUEST: Now playing
-        printf("1 -> DBG: Weird message %s", msg);
+        // TODO: Get latest song from QUERY_TABLE
     }
     else if (strcmp(msg, "DISCONNECT") == 0)
     {
         // REQUEST: Disconnect
-        printf("2 -> DBG: Weird message %s", msg);
+        // Close socket
     }
     else
     {
-        printf("DBG: Weird message %s", msg);
+        printf("-> DEBUG: Unknown requrest %s\n", msg);
     }
 
-    printf("DBG: Thread finished.\n");
+    printf("-> DEBUG: Closing socket + ending thread.\n");
+    close(sockfd);
 
     return 0;
 }
 
-void startParty(int sockfd, struct sockaddr_in *server_addr, char *net_buf)
+void start_party(int sockfd, struct sockaddr_in *server_addr)
 {
     // Bind the address struct to the socket
     if (bind(sockfd, (struct sockaddr *)server_addr, sizeof(*server_addr)) != 0)
@@ -147,46 +155,18 @@ void startParty(int sockfd, struct sockaddr_in *server_addr, char *net_buf)
     }
 }
 
-void downloadMissingSongs()
+void download_missing_songs()
 {
-    printf("\nSongs downloaded!\n");
-}
-
-void player()
-{
-    // thread, takes care of whats now playing
-    // * plays music from QUERY_LIST; Every "song_length" minutes, it deletes the song from the query
-    // * if QUERY_LIST is empty, gets random song and adds it to the QUERY_LIST
+    db_download_missing_songs();
 }
 
 int main()
 {
-    // TESTING DB -----------------------------------------------------------------
-    // initialize_db_tables();
-    // Song new_song = {
-    //     .title = "Animals",
-    //     .artist = "Martin Garrix",
-    //     .length = 3.5
-    // };
-    // db_add_song(new_song, MUSIC_TABLE);
-
-    // Song song_request = {
-    //     .title = "workaholic",
-    //     .artist = "ambulance"
-    // };
-
-    // printf("Song '%s - %s' found: %d\n", song_request.artist, song_request.title, request_song(song_request));
-
-    // return 0;
-    // ----------------------------------------------------------------------------
-
     // SOCKET PREREQUISITES / CONFIGURATION
     // -------------------------------------------------------
     initialize_db_tables();
 
-    int sockfd;
-    // sockfd = socket(AF_INET, SOCK_DGRAM, 0); // SOCK_DGRAM doesn't support listen()
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd == 0)
         perror("\nCannot create socket for listening.\n");
 
@@ -196,14 +176,9 @@ int main()
     server_addr.sin_family = AF_INET;              // internet
     server_addr.sin_port = htons(PORT);            // port
     server_addr.sin_addr.s_addr = inet_addr(ADDR); // INADDR_ANY
-    // server_addr.sin_addr.s_addr = INADDR_ANY;
     memset(server_addr.sin_zero, '\0', sizeof server_addr.sin_zero);
 
-    char net_buf[NET_BUF_SIZE];
-    int msg_bytes;
-
     // -------------------------------------------------------
-
     // MAIN MENU
     // -------------------------------------------------------
     while (1)
@@ -215,47 +190,46 @@ int main()
         else
         {
             printf("\t1. Start party\n");
-            printf("\t2. Download new song\n");
-            printf("\t3. Download requested missing songs\n");
-        }
-        printf("Choice: ");
-        short choice;
-        scanf("%hd", &choice);
-        while ((getchar()) != '\n')
-            ;
+            printf("\t2. Add new song\n");
+            printf("\t3. Add requested missing songs\n");
+            printf("\t4. Show missing songs\n");
 
-        Song new_song;
+            printf("Choice: ");
+            short choice;
+            scanf("%hd", &choice);
+            while ((getchar()) != '\n');
 
-        switch (choice)
-        {
-        case 1:
-            // Start listening on PORT when party starts (TODO: in a new process)
-            printf("Party started!");
-            startParty(sockfd, &server_addr, net_buf);
-            break;
-        case 2:
-            // Add new song logic;
-            getLine("Title: ", new_song.title, sizeof new_song.title);
-            getLine("Artist: ", new_song.artist, sizeof new_song.artist);
-            printf("Length: ");
-            scanf("%f", &new_song.length);
-            db_add_song(new_song, MUSIC_TABLE);
-            break;
-        case 3:
-            // Download missing songs to DB
-            downloadMissingSongs();
-            break;
-        default:
-            printf("\nWrong choice!\n");
+            Song new_song;
+
+            switch (choice)
+            {
+            case 1:
+                // Start listening on PORT when party starts (TODO: in a new process)
+                printf("Party started!");
+                start_player();
+                start_party(sockfd, &server_addr);
+                break;
+            case 2:
+                // Add new song logic;
+                get_line("Title: ", new_song.title, sizeof new_song.title);
+                get_line("Artist: ", new_song.artist, sizeof new_song.artist);
+                printf("Length: ");
+                scanf("%f", &new_song.length);
+                db_add_song(new_song, MUSIC_TABLE);
+                break;
+            case 3:
+                // Download missing songs to DB
+                download_missing_songs();
+                break;
+            case 4:
+                // TODO
+                break;
+            default:
+                printf("\nWrong choice!\n");
+            }
         }
     }
     // -------------------------------------------------------
 
     return 0;
-}
-
-void download_missing_songs()
-{
-    // Get all data from MISSING_TABLE
-    // Insert all data to MUSIC_COLLECTION
 }

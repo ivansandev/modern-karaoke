@@ -35,6 +35,6 @@ int db_add_song(struct Song song, char *db_table);         // done
 int db_remove_song(char *title_or_artist);
 int db_add_missing_songs();
 
-void download_missing_songs();
+void db_download_missing_songs();
 
 #endif /* DB_MODULE */

@@ -159,6 +159,8 @@ int db_add_song(struct Song song, char *db_table)
     //          1  -> song already in library
     //          0  -> song added
 
+    // TODO: Verify input
+
     // Check if song is already in library
     int song_found = db_find_song(song, db_table);
     if (song_found < 0)
@@ -189,35 +191,7 @@ int db_add_song(struct Song song, char *db_table)
     }
 }
 
-// int request_song(struct Song song)
-// {
-//     // Returns: int
-//     //          <0 -> error requesting song
-//     //           0 -> Song found and requested
-//     //           1 -> Song not found
-//     int song_found = db_find_song(song, MUSIC_TABLE);
-//     int status;
-//     if (song_found < 0) {
-//         printf("Error requesting song.\n");
-//         return -1;
-//     }
-//     else if (song_found == 0)
-//     {
-//         // add_missing_song(song);
-//         db_add_song(song, MISSING_TABLE);
-//         return 1;
-//     }
-//     else {
-//         db_add_song(song, QUERY_TABLE);
-//         return 0;
-//     }
-// }
+void db_download_missing_songs()
+{
 
-// void now_playing(char *current_song)
-// {
-//     sqlite3 *db;
-//     sqlite3_stmt *res;
-//     char query[256];
-
-//     snprintf(query, 256, "SELECT * FROM " QUERY_TABLE " SORT ");
-// }
+}
