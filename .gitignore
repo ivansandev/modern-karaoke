@@ -1,3 +1,9 @@
+# VSC
+.vscode
+
+# MacOS
+.DS_Store
+
 # Prerequisites
 *.d
 
