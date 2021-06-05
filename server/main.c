@@ -32,7 +32,7 @@ int PARTY_STARTED = 0;
 // pthread_cond_t PARTY_STARTED = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
 int sockfd = 0;
-pthread_t clients_con[MAX_CLIENTS];
+pthread_t clients_con[MAX_CLIENTS], player_thread, party_thread;
 
 void clearBuffer(char *buf, int charlen)
 {
@@ -51,9 +51,10 @@ void handle_sigint(int signum)
     int i=0;
     for (i=0; i< MAX_CLIENTS; i++)
     {
-        pthread_exit(clients_con[i]);
+        pthread_join(clients_con[i], NULL);
     }
     close(sockfd);
+    exit(0);
 }
 
 void *clientThread(void *arg)
@@ -121,24 +122,22 @@ void *clientThread(void *arg)
         // REQUEST: Now playing
         // TODO: Get latest song from QUERY_TABLE
     }
-    else if (strcmp(msg, "DISCONNECT") == 0)
-    {
-        // REQUEST: Disconnect
-        // Close socket
-    }
     else
     {
         printf("-> DEBUG: Unknown requrest %s\n", msg);
     }
 
-    printf("-> DEBUG: Closing socket + ending thread.\n");
+    printf("-> DEBUG: Closing socket, ending thread.\n");
     close(sockfd);
 
     return 0;
 }
 
-void start_party(struct sockaddr_in *server_addr)
+// void *start_party(struct sockaddr_in *server_addr)
+void *start_party(void *addr)
 {
+    signal(SIGINT, handle_sigint);
+    struct sockaddr_in *server_addr = ((struct sockaddr_in*) addr);
     // Bind the address struct to the socket
     if (bind(sockfd, (struct sockaddr *)server_addr, sizeof(*server_addr)) != 0)
         printf("\nError occured while binding socket.\n");
@@ -148,7 +147,7 @@ void start_party(struct sockaddr_in *server_addr)
     if (listen(sockfd, MAX_CLIENTS) != 0)
     {
         perror("\nCannot listen");
-        return;
+        return NULL;
     }
 
     int i = 0;
@@ -173,7 +172,6 @@ void download_missing_songs()
 
 int main()
 {
-    signal(SIGINT, handle_sigint);
     // SOCKET PREREQUISITES / CONFIGURATION
     // -------------------------------------------------------
     initialize_db_tables();
@@ -183,23 +181,39 @@ int main()
         perror("\nCannot create socket for listening.\n");
 
     struct sockaddr_in server_addr;
-    struct sockaddr_storage server_storage;
+    // struct sockaddr_storage server_storage;
 
     server_addr.sin_family = AF_INET;              // internet
     server_addr.sin_port = htons(PORT);            // port
     server_addr.sin_addr.s_addr = inet_addr(ADDR); // INADDR_ANY
     memset(server_addr.sin_zero, '\0', sizeof server_addr.sin_zero);
-    setsockopt(sockfd,SOL_SOCKET,SO_REUSEADDR,1,sizeof(int));
+    setsockopt(sockfd,SOL_SOCKET,SO_REUSEADDR,NULL,sizeof(int));
 
     // -------------------------------------------------------
     // MAIN MENU
     // -------------------------------------------------------
+    short menu_choice;
     while (1)
     {
-        if (PARTY_STARTED)
+        if (PARTY_STARTED == 1)
         {
             printf("\t1.End party\n");
             printf("\t2. Show requested songs\n");
+
+            printf("Choice: ");
+            scanf("%hd", &menu_choice);
+            while ((getchar()) != '\n');
+
+            switch (menu_choice)
+            {
+                case 1:
+                    pthread_join(party_thread, 0);
+                    pthread_join(player_thread, 0);
+                    PARTY_STARTED = 0;
+                    break;
+                case 2:
+                    break;
+            }
         }
         else
         {
@@ -210,22 +224,24 @@ int main()
             printf("\t5. Show all songs\n");
 
             printf("Choice: ");
-            short choice;
-            scanf("%hd", &choice);
+            scanf("%hd", &menu_choice);
             while ((getchar()) != '\n');
 
             Song new_song;
 
-            switch (choice)
+            switch (menu_choice)
             {
             case 1:
-                // Start listening on PORT when party starts (TODO: in a new process)
-                printf("Party started!");
-                start_player();
-                start_party(&server_addr);
+                // TODO: Create process/thread for party
+                // TODO: Create process/thread for player
+                PARTY_STARTED = 1;
+                pthread_create(&player_thread, NULL, start_player, NULL);
+                pthread_create(&party_thread, NULL, start_party, &server_addr);
+                printf("Party started!\n");
                 break;
             case 2:
                 // Add new song logic;
+                // TODO: Validate input
                 get_line("Title: ", new_song.title, sizeof new_song.title);
                 get_line("Artist: ", new_song.artist, sizeof new_song.artist);
                 printf("Length: ");
@@ -233,7 +249,7 @@ int main()
                 db_add_song(new_song, MUSIC_TABLE);
                 break;
             case 3:
-                // Download missing songs to DB
+                // TODO: Download missing songs to DB
                 download_missing_songs();
                 break;
             case 4:
@@ -243,7 +259,7 @@ int main()
                 show_all_songs();
                 break;
             default:
-                printf("\nWrong choice!\n");
+                printf("\nUnknown choice!\n");
             }
         }
     }

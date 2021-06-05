@@ -71,7 +71,7 @@ int db_get_missing_songs()
     int i = 0;
     for (i=0; i<50; i++)
     {
-        if (songs[i].title == NULL)
+        if (songs[i].title[0] == '\0')
             break;
         db_add_song(songs[i], MUSIC_TABLE);
     }

@@ -5,6 +5,12 @@
 .DS_Store
 requirements.md
 
+# DB
+db/
+
+# Compiles file
+out
+
 # Prerequisites
 *.d
 
