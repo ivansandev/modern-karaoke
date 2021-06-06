@@ -15,31 +15,17 @@ typedef struct Song {
 static int callback(void *NotUsed, int argc, char **argv, char **azColName);
 int db_execute(char *query);
 
-void initialize_db_tables();
+// DB CONFIGURATION
+void initialize_db();
 int db_create_table_music();
 int db_create_table_missing_songs();
 int db_create_table_query();
 
-// TODO: Methods below
-
-
-// CLIENT REQUEST
-// int request_song(struct Song song);      // done
-// void now_playing(char *buffer);
-
-// FUNCTIONS FOR CLIENT REQUEST
+//
 int db_find_song(struct Song song, char *table); // done
-
-// SERVER FUNCTIONS
 int db_add_song(struct Song song, char *db_table);         // done
 int db_remove_song(char *title_or_artist);
 int db_add_missing_songs();
-
-void db_download_missing_songs();
-
-void show_all_songs();
-void show_missing_songs();
-
 
 static int callback_missing_songs(void *NotUsed, int argc, char **argv, char **azColName);
 int db_get_missing_songs();

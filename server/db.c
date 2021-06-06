@@ -121,6 +121,8 @@ int db_create_table_music()
             "title          TEXT    NOT NULL,"
             "artist         TEXT    NOT NULL,"
             "length         REAL    NOT NULL DEFAULT 3.5,"
+            "created_at     TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+            "genre          TEXT,"
             "UNIQUE(title, artist))";
     // "YEAR           INTEGER"                      \
             // "BITRATE        INTEGER"                      \
@@ -166,7 +168,7 @@ int db_create_table_missing_songs()
     return status;
 }
 
-void initialize_db_tables()
+void initialize_db()
 {
     db_create_table_music();
     db_create_table_query();
@@ -254,23 +256,4 @@ int db_add_song(struct Song song, char *db_table)
         printf("Unknown error occurred while adding song!\n");
         return -2;
     }
-}
-
-void db_download_missing_songs()
-{
-
-}
-
-void show_missing_songs()
-{
-    printf("--------- MISSING SONGS ---------\n");
-    db_execute("SELECT * FROM " MISSING_TABLE);
-    printf("---------------------------------\n");
-}
-
-void show_all_songs()
-{
-    printf("--------- ALL SONGS ---------\n");
-    db_execute("SELECT * FROM " MUSIC_TABLE);
-    printf("-----------------------------\n");
 }

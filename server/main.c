@@ -13,9 +13,10 @@
 #include <fcntl.h>
 #include <pthread.h>
 #include "db.h"
-#include "helper_functions.h"
+#include "helpers.h"
 #include "client_requests.h"
 #include "player.h"
+#include "menu_functions.h"
 
 #define ADDR "127.0.0.1"
 #define PORT 8080
@@ -33,6 +34,7 @@ int PARTY_STARTED = 0;
 pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
 int sockfd = 0;
 pthread_t clients_con[MAX_CLIENTS], player_thread, party_thread;
+
 
 void clearBuffer(char *buf, int charlen)
 {
@@ -76,7 +78,7 @@ void *clientThread(void *arg)
         return 0;
     }
 
-    send_ok(sockfd);
+    send(sockfd, "OK", 2, 0);
 
     // SONG REQUEST
     if (strcmp(msg, "REQUEST") == 0)
@@ -88,14 +90,14 @@ void *clientThread(void *arg)
         recv(sockfd, msg, PACKAGE_LEN, 0);
         strcpy(song_request.title, msg);
         clearBuffer(msg, PACKAGE_LEN);
-        send_ok(sockfd);
+        send(sockfd, "OK", 2, 0);
 
         // RECEIVE SONG ARTIST
         printf("-> DEBUG: Receive song artist\n");
         recv(sockfd, msg, PACKAGE_LEN, 0);
         strcpy(song_request.artist, msg);
         clearBuffer(msg, PACKAGE_LEN);
-        send_ok(sockfd);
+        send(sockfd, "OK", 2, 0);
 
         printf("Song requested: %s - %s\n", song_request.title, song_request.artist);
         pthread_mutex_lock(&mtx);
@@ -165,16 +167,11 @@ void *start_party(void *addr)
     }
 }
 
-void download_missing_songs()
-{
-    db_get_missing_songs();
-}
-
 int main()
 {
-    // SOCKET PREREQUISITES / CONFIGURATION
+    // PREREQUISITES / CONFIGURATION
     // -------------------------------------------------------
-    initialize_db_tables();
+    initialize_db();
 
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd == 0)
@@ -212,7 +209,10 @@ int main()
                     PARTY_STARTED = 0;
                     break;
                 case 2:
+                    show_query();
                     break;
+                default:
+                    printf("Invalid choice.\n");
             }
         }
         else
@@ -227,8 +227,6 @@ int main()
             scanf("%hd", &menu_choice);
             while ((getchar()) != '\n');
 
-            Song new_song;
-
             switch (menu_choice)
             {
             case 1:
@@ -240,16 +238,9 @@ int main()
                 printf("Party started!\n");
                 break;
             case 2:
-                // Add new song logic;
-                // TODO: Validate input
-                get_line("Title: ", new_song.title, sizeof new_song.title);
-                get_line("Artist: ", new_song.artist, sizeof new_song.artist);
-                printf("Length: ");
-                scanf("%f", &new_song.length);
-                db_add_song(new_song, MUSIC_TABLE);
+                add_song_collection();
                 break;
             case 3:
-                // TODO: Download missing songs to DB
                 download_missing_songs();
                 break;
             case 4:
