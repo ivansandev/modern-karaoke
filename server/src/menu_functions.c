@@ -1,5 +1,5 @@
 #include "menu_functions.h"
-#include "db/db.h"
+#include "../db/db.h"
 #include "helpers.h"
 #include <stdio.h>
 #include <stdlib.h>

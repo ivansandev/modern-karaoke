@@ -12,10 +12,10 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <pthread.h>
-#include "client_requests.h"
-#include "player.h"
-#include "menu_functions.h"
-#include "helpers.h"
+#include "src/client_requests.h"
+#include "src/player.h"
+#include "src/menu_functions.h"
+#include "src/helpers.h"
 
 #define ADDR "127.0.0.1"
 #define PORT 8080
