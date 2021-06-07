@@ -1,0 +1,12 @@
+"filename", "language", "C", "C++", "Makefile", "comment", "blank", "total"
+"/Users/ivansandev/Documents/Technical University/6 Семестър/СПр/Проект/modern-karaoke/server/Makefile", "Makefile", 0, 0, 4, 0, 1, 5
+"/Users/ivansandev/Documents/Technical University/6 Семестър/СПр/Проект/modern-karaoke/server/client_requests.c", "C", 25, 0, 0, 12, 4, 41
+"/Users/ivansandev/Documents/Technical University/6 Семестър/СПр/Проект/modern-karaoke/server/client_requests.h", "C++", 0, 8, 0, 0, 4, 12
+"/Users/ivansandev/Documents/Technical University/6 Семестър/СПр/Проект/modern-karaoke/server/helpers.c", "C", 32, 0, 0, 4, 7, 43
+"/Users/ivansandev/Documents/Technical University/6 Семестър/СПр/Проект/modern-karaoke/server/helpers.h", "C++", 0, 10, 0, 0, 5, 15
+"/Users/ivansandev/Documents/Technical University/6 Семестър/СПр/Проект/modern-karaoke/server/main.c", "C", 189, 0, 0, 37, 32, 258
+"/Users/ivansandev/Documents/Technical University/6 Семестър/СПр/Проект/modern-karaoke/server/menu_functions.c", "C", 35, 0, 0, 2, 5, 42
+"/Users/ivansandev/Documents/Technical University/6 Семестър/СПр/Проект/modern-karaoke/server/menu_functions.h", "C++", 0, 8, 0, 0, 2, 10
+"/Users/ivansandev/Documents/Technical University/6 Семестър/СПр/Проект/modern-karaoke/server/player.c", "C", 7, 0, 0, 3, 1, 11
+"/Users/ivansandev/Documents/Technical University/6 Семестър/СПр/Проект/modern-karaoke/server/player.h", "C++", 0, 4, 0, 0, 2, 6
+"Total", "-", 288, 30, 4, 58, 63, 443

@@ -12,15 +12,14 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <pthread.h>
-#include "db.h"
-#include "helpers.h"
 #include "client_requests.h"
 #include "player.h"
 #include "menu_functions.h"
+#include "helpers.h"
 
 #define ADDR "127.0.0.1"
 #define PORT 8080
-#define MAX_CLIENTS 100
+#define MAX_CLIENT_REQUESTS 50
 #define PACKAGE_LEN 1024
 
 // RESPONSES FOR CLIENT'S REQUEST
@@ -33,15 +32,8 @@ int PARTY_STARTED = 0;
 // pthread_cond_t PARTY_STARTED = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
 int sockfd = 0;
-pthread_t clients_con[MAX_CLIENTS], player_thread, party_thread;
+pthread_t clients_con[MAX_CLIENT_REQUESTS], player_thread, party_thread;
 
-
-void clearBuffer(char *buf, int charlen)
-{
-    int i;
-    for (i = 0; i < charlen; i++)
-        buf[i] = '\0';
-}
 
 void handle_sigint(int signum)
 {
@@ -51,11 +43,12 @@ void handle_sigint(int signum)
     printf("\nParty ending!\n");
     PARTY_STARTED = 0;
     int i=0;
-    for (i=0; i< MAX_CLIENTS; i++)
+    for (i=0; i< MAX_CLIENT_REQUESTS; i++)
     {
-        pthread_join(clients_con[i], NULL);
+        if (clients_con[i] != NULL)
+            pthread_join(clients_con[i], NULL);
     }
-    close(sockfd);
+    // close(sockfd);
     exit(0);
 }
 
@@ -146,7 +139,7 @@ void *start_party(void *addr)
 
     // Listen for upcoming requests and start thread with socket connection for every client
     printf("\nWaiting for guests...\n");
-    if (listen(sockfd, MAX_CLIENTS) != 0)
+    if (listen(sockfd, MAX_CLIENT_REQUESTS) != 0)
     {
         perror("\nCannot listen");
         return NULL;
@@ -196,6 +189,7 @@ int main()
         {
             printf("\t1.End party\n");
             printf("\t2. Show requested songs\n");
+            printf("\t3. Play next requested song\n");
 
             printf("Choice: ");
             scanf("%hd", &menu_choice);
@@ -204,12 +198,16 @@ int main()
             switch (menu_choice)
             {
                 case 1:
-                    pthread_join(party_thread, 0);
-                    pthread_join(player_thread, 0);
-                    PARTY_STARTED = 0;
+                    // pthread_join(party_thread, 0);
+                    pthread_kill(party_thread, SIGINT);
+
+                    // pthread_join(player_thread, 0);
                     break;
                 case 2:
                     show_query();
+                    break;
+                case 3:
+                    // TODO: play_next_request();
                     break;
                 default:
                     printf("Invalid choice.\n");
@@ -219,9 +217,9 @@ int main()
         {
             printf("\t1. Start party\n");
             printf("\t2. Add new song\n");
-            printf("\t3. Add requested missing songs\n");
+            printf("\t3. Show all songs\n");
             printf("\t4. Show missing songs\n");
-            printf("\t5. Show all songs\n");
+            printf("\t5. Download requested missing songs\n");
 
             printf("Choice: ");
             scanf("%hd", &menu_choice);
@@ -230,24 +228,23 @@ int main()
             switch (menu_choice)
             {
             case 1:
-                // TODO: Create process/thread for party
-                // TODO: Create process/thread for player
                 PARTY_STARTED = 1;
-                pthread_create(&player_thread, NULL, start_player, NULL);
                 pthread_create(&party_thread, NULL, start_party, &server_addr);
+                // pthread_create(&player_thread, NULL, start_player, NULL);
                 printf("Party started!\n");
+                sleep(1);
                 break;
             case 2:
-                add_song_collection();
+                add_song_wizard();
                 break;
             case 3:
-                download_missing_songs();
+                show_songs();
                 break;
             case 4:
                 show_missing_songs();
                 break;
             case 5:
-                show_all_songs();
+                download_missing_songs();
                 break;
             default:
                 printf("\nUnknown choice!\n");

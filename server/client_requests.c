@@ -1,7 +1,7 @@
 #include "client_requests.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "db.h"
+#include "db/db.h"
 
 int request_song(struct Song song)
 {
@@ -10,7 +10,7 @@ int request_song(struct Song song)
     //           0 -> Song found and requested
     //           1 -> Song not found, added in request_List for future parties
 
-    int song_found = db_find_song(song, MUSIC_TABLE);
+    int song_found = db_find_id_song(song);
     if (song_found < 0) {
         printf("Error requesting song.\n");
         return -1;
@@ -37,9 +37,4 @@ int request_now_playing()
     //     return 1;
     // }
     return 0;
-}
-
-void now_playing(char *buffer)
-{
-
 }
