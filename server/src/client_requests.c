@@ -1,7 +1,7 @@
 #include "client_requests.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "db/db.h"
+#include "db.h"
 
 int request_song(struct Song song)
 {
