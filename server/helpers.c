@@ -1,6 +1,4 @@
-#ifndef HELPER_MODULE
-#define HELPER_MODULE
-
+#include "helpers.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -8,7 +6,7 @@
 #define NO_INPUT 1
 #define TOO_LONG 2
 
-static int get_line(char *prmpt, char *buff, size_t sz)
+int get_line(char *prmpt, char *buff, size_t sz)
 {
     int ch, extra;
 
@@ -36,9 +34,9 @@ static int get_line(char *prmpt, char *buff, size_t sz)
     return OK;
 }
 
-void send_ok(int sockfd)
+void clearBuffer(char *buf, int charlen)
 {
-    send(sockfd, "OK", 2, 0);
+    int i;
+    for (i = 0; i < charlen; i++)
+        buf[i] = '\0';
 }
-
-#endif /* HELPER_MODULE */

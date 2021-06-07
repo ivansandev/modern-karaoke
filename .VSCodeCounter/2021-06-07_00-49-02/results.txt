@@ -1,0 +1,36 @@
+Date : 2021-06-07 00:49:02
+Directory : /Users/ivansandev/Documents/Technical University/6 Семестър/СПр/Проект/modern-karaoke/server
+Total : 10 files,  322 codes, 58 comments, 63 blanks, all 443 lines
+
+Languages
++----------+------------+------------+------------+------------+------------+
+| language | files      | code       | comment    | blank      | total      |
++----------+------------+------------+------------+------------+------------+
+| C        |          5 |        288 |         58 |         49 |        395 |
+| C++      |          4 |         30 |          0 |         13 |         43 |
+| Makefile |          1 |          4 |          0 |          1 |          5 |
++----------+------------+------------+------------+------------+------------+
+
+Directories
++----------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                                                                           | files      | code       | comment    | blank      | total      |
++----------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                                                              |         10 |        322 |         58 |         63 |        443 |
++----------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++----------------------------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
+| filename                                                                                                       | language | code       | comment    | blank      | total      |
++----------------------------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
+| /Users/ivansandev/Documents/Technical University/6 Семестър/СПр/Проект/modern-karaoke/server/Makefile          | Makefile |          4 |          0 |          1 |          5 |
+| /Users/ivansandev/Documents/Technical University/6 Семестър/СПр/Проект/modern-karaoke/server/client_requests.c | C        |         25 |         12 |          4 |         41 |
+| /Users/ivansandev/Documents/Technical University/6 Семестър/СПр/Проект/modern-karaoke/server/client_requests.h | C++      |          8 |          0 |          4 |         12 |
+| /Users/ivansandev/Documents/Technical University/6 Семестър/СПр/Проект/modern-karaoke/server/helpers.c         | C        |         32 |          4 |          7 |         43 |
+| /Users/ivansandev/Documents/Technical University/6 Семестър/СПр/Проект/modern-karaoke/server/helpers.h         | C++      |         10 |          0 |          5 |         15 |
+| /Users/ivansandev/Documents/Technical University/6 Семестър/СПр/Проект/modern-karaoke/server/main.c            | C        |        189 |         37 |         32 |        258 |
+| /Users/ivansandev/Documents/Technical University/6 Семестър/СПр/Проект/modern-karaoke/server/menu_functions.c  | C        |         35 |          2 |          5 |         42 |
+| /Users/ivansandev/Documents/Technical University/6 Семестър/СПр/Проект/modern-karaoke/server/menu_functions.h  | C++      |          8 |          0 |          2 |         10 |
+| /Users/ivansandev/Documents/Technical University/6 Семестър/СПр/Проект/modern-karaoke/server/player.c          | C        |          7 |          3 |          1 |         11 |
+| /Users/ivansandev/Documents/Technical University/6 Семестър/СПр/Проект/modern-karaoke/server/player.h          | C++      |          4 |          0 |          2 |          6 |
+| Total                                                                                                          |          |        322 |         58 |         63 |        443 |
++----------------------------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
