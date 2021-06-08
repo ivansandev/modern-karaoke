@@ -7,6 +7,4 @@
 
 int request_song(struct Song song);
 
-int request_now_playing();
-
 #endif /* CLIENT_MODULE */

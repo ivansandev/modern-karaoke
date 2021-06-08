@@ -12,8 +12,6 @@ ERROR_MSG            = "ERROR"
 SONG_UNAVAILABLE_MSG = "SNGNA"
 SONG_REQUESTED_MSG   = "SNGOK"
 
-def main():
-    request_song("animals", "martin garrix")
 
 def recv_ok(s):
     msg = s.recv(2, 0).decode()
@@ -21,58 +19,93 @@ def recv_ok(s):
         return False
     return True
 
+
+def handshake() -> bool:
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            # Connect to socket
+            status = s.connect((ADDR, PORT))
+
+            # Send handshake
+            s.send(str.encode("HANDSHAKE\0"), 0)
+
+            # Receive handshake
+            if not recv_ok(s):
+                return False
+            else:
+                return True
+
+    except ConnectionRefusedError:
+        # No connection to server
+        return False
+
+
 def request_song(title, artist) -> int:
     if not title or title == "" or not artist or artist == "":
         return -2
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            # s.setblocking(0)
 
             # Connect to socket
             status = s.connect((ADDR, PORT))
 
             # Send type of request
-            print("DEBUG: Sending request type")
             s.send(str.encode("REQUEST\0"), 0)
-            # time.sleep(0.01)
             if not recv_ok(s):
                 print("OK not received")
+                return -5
 
             # Send title
-            print("DEBUG: Sending song title")
             s.send(str.encode(title))
-            # time.sleep(0.01)
             if not recv_ok(s):
                 print("OK not received")
+                return -5
 
             # Send artist
-            print("DEBUG: Sending song artist")
             s.send(str.encode(artist))
-            # time.sleep(0.01)
             if not recv_ok(s):
                 print("OK not received")
+                return -5
 
             # Get response
             msg = s.recv(5, 0).decode()
             if (msg == SONG_REQUESTED_MSG):
-                # print("Request successful.")
                 return 0
+
             elif (msg == SONG_UNAVAILABLE_MSG):
-                # print("Song unavailable. Please try another song.")
                 return 1
+
             elif (msg == ERROR_MSG):
-                # print("Error occured while requesting song.")
                 return -3
+
             else:
-                # print("Unknown response.")
                 return -4
 
-
     except ConnectionRefusedError:
-        print("Cannot connect to server.")
+        # No connection to server
         return -1
 
+def request_next_playing():
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+
+            # Connect to socket
+            status = s.connect((ADDR, PORT))
+
+            # Send type of request
+            s.send(str.encode("NEXT\0"), 0)
+
+            # Get response
+            msg = s.recv(5, 0).decode()
+            return msg;
+
+    except ConnectionRefusedError:
+        # No connection to server
+        return -1
+
+
 if __name__ == "__main__":
+    # For running in CLI without GUI
     if len(sys.argv) > 2:
         title = sys.argv[1]
         artist = sys.argv[2]

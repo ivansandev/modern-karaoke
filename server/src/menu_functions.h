@@ -6,5 +6,6 @@ void download_missing_songs();
 void show_missing_songs();
 void show_songs();
 void show_query();
+void play_next_request();
 
 #endif /* MENU_MODULE */
