@@ -4,8 +4,9 @@
 
 void *start_player()
 {
-    // thread, takes care of whats now playing
-    // * plays music from QUERY_LIST; Every "song_length" minutes, it deletes the song from the query
-    // * if QUERY_LIST is empty, gets random song and adds it to the QUERY_LIST
-    return NULL;
+    /*
+        This file is made for future use.
+        Player would start a song and in a couple of minutes it will get to the next on in the query atomatically,
+        or it will pick a random song from the collection automatically.
+    */
 }
