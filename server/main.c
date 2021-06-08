@@ -33,7 +33,7 @@ int PARTY_STARTED = 0;
 // pthread_cond_t PARTY_STARTED = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
 int sockfd = 0;
-pthread_t clients_con[MAX_REQUESTS], player_thread, party_thread;
+// pthread_t clients_con[MAX_REQUESTS], player_thread, party_thread;
 
 
 void handle_sigint(int signum)
@@ -47,7 +47,7 @@ void handle_sigint(int signum)
     pthread_exit(NULL);
 }
 
-void *clientThread(void *arg)
+void *clientThread(void *socket_fd)
 {
     /*
     Client can request:
@@ -56,7 +56,7 @@ void *clientThread(void *arg)
        - Future TODO: now_playing, queried_songs, song_collection
     */
     char msg[PACKAGE_LEN];
-    int sockfd = *((int *)arg);
+    int sockfd = *((int *)socket_fd);
 
     if (recv(sockfd, msg, PACKAGE_LEN, 0) == 0)
     {
@@ -115,7 +115,7 @@ void *clientThread(void *arg)
     }
 
     close(sockfd);
-    return 0;
+    pthread_exit(NULL);
 }
 
 void *start_party(void *addr)
@@ -138,6 +138,7 @@ void *start_party(void *addr)
     }
 
     int i = 0;
+    pthread_t clients_con[MAX_REQUESTS];
     while (1)
     {
         if (i > MAX_REQUESTS) {
@@ -180,6 +181,8 @@ int main()
     memset(server_addr.sin_zero, '\0', sizeof server_addr.sin_zero);
     setsockopt(sockfd,SOL_SOCKET,SO_REUSEADDR,NULL,sizeof(int));
 
+    pthread_t party_thread;
+
     // -------------------------------------------------------
     // MAIN MENU
     // -------------------------------------------------------
@@ -204,16 +207,12 @@ int main()
             switch (menu_choice)
             {
                 case 1:
-                    // pthread_join(party_thread, 0);
-                    // pthread_kill(party_thread, SIGINT);
-                    // getSO_ERROR(sockfd);
                     // if (shutdown(sockfd, SHUT_RDWR) < 0)
                     //     perror("Shutdown");
                     if (close(sockfd) < 0)
                         perror("Close");
                     PARTY_STARTED = 0;
-
-                    // pthread_join(player_thread, 0);
+                    // pthread_join(party_thread, 0);
                     break;
                 case 2:
                     show_query();
@@ -246,7 +245,6 @@ int main()
             case 1:
                 PARTY_STARTED = 1;
                 pthread_create(&party_thread, NULL, start_party, &server_addr);
-                // pthread_create(&player_thread, NULL, start_player, NULL);
                 printf("\\m/  Party started!  \\m/\n");
                 sleep(1);
                 break;

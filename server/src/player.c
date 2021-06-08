@@ -9,4 +9,5 @@ void *start_player()
         Player would start a song and in a couple of minutes it will get to the next on in the query atomatically,
         or it will pick a random song from the collection automatically.
     */
+   return NULL;
 }

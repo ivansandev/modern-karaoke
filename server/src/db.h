@@ -9,7 +9,6 @@
 typedef struct Song {
     char title[100];
     char artist[100];
-    char genre[50];
 } Song;
 
 // static int callback(void *NotUsed, int argc, char **argv, char **azColName);

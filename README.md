@@ -1,5 +1,0 @@
-# modern-karaoke
-
-## Description
-
-## Requirements
