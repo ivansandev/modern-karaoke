@@ -12,90 +12,85 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <signal.h>
 #include "src/client_requests.h"
 #include "src/player.h"
 #include "src/menu_functions.h"
 #include "src/helpers.h"
 
-#define ADDR "127.0.0.1"
-#define PORT 8080
-#define MAX_CLIENT_REQUESTS 50
-#define PACKAGE_LEN 1024
+#define ADDR         "127.0.0.1"
+#define PORT         8080
+#define MAX_REQUESTS 500
+#define PACKAGE_LEN  1024
 
 // RESPONSES FOR CLIENT'S REQUEST
-#define ERROR_MSG "ERROR"
-#define SONG_UNAVAILABLE_MSG "SNGNA"
-#define SONG_REQUESTED_MSG "SNGOK"
+#define ERROR_MSG             "ERROR"
+#define SONG_UNAVAILABLE_MSG  "SNGNA"
+#define SONG_REQUESTED_MSG    "SNGOK"
 
 
 int PARTY_STARTED = 0;
 // pthread_cond_t PARTY_STARTED = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
 int sockfd = 0;
-pthread_t clients_con[MAX_CLIENT_REQUESTS], player_thread, party_thread;
+pthread_t clients_con[MAX_REQUESTS], player_thread, party_thread;
 
 
 void handle_sigint(int signum)
 {
     /*
-    Takes care when the server stops, to kill all threads and close all client socket conections.
+        Takes care when the server stops, to kill all threads and close all client socket conections.
     */
-    printf("\nParty ending!\n");
+    printf("\nParty Ending!\n");
     PARTY_STARTED = 0;
-    int i=0;
-    for (i=0; i< MAX_CLIENT_REQUESTS; i++)
-    {
-        if (clients_con[i] != NULL)
-            pthread_join(clients_con[i], NULL);
-    }
-    // close(sockfd);
-    exit(0);
+    close(sockfd);
+    pthread_exit(NULL);
 }
 
 void *clientThread(void *arg)
 {
+    /*
+    Client can request:
+       - handshake
+       - song
+       - Future TODO: now_playing, queried_songs, song_collection
+    */
     char msg[PACKAGE_LEN];
     int sockfd = *((int *)arg);
 
-    // Client's initial message request can be:
-    //       - Song request
-    //       - Now playing
-    //       - Disconnect
-
-    // Receive what kind of request does the client have
-    printf("-> DEBUG: Receive request type\n");
     if (recv(sockfd, msg, PACKAGE_LEN, 0) == 0)
     {
-        // Close connection
         close(sockfd);
         return 0;
     }
-
     send(sockfd, "OK", 2, 0);
 
     // SONG REQUEST
     if (strcmp(msg, "REQUEST") == 0)
     {
         Song song_request;
+
         // RECEIVE SONG TITLE
         clearBuffer(msg, PACKAGE_LEN);
-        printf("-> DEBUG: Receive song title\n");
         recv(sockfd, msg, PACKAGE_LEN, 0);
         strcpy(song_request.title, msg);
         clearBuffer(msg, PACKAGE_LEN);
         send(sockfd, "OK", 2, 0);
 
         // RECEIVE SONG ARTIST
-        printf("-> DEBUG: Receive song artist\n");
         recv(sockfd, msg, PACKAGE_LEN, 0);
         strcpy(song_request.artist, msg);
         clearBuffer(msg, PACKAGE_LEN);
         send(sockfd, "OK", 2, 0);
 
-        printf("Song requested: %s - %s\n", song_request.title, song_request.artist);
+        // Song gets checked if it's available
+        //   1. If it's available, it's added to query playlist and client gets notified
+        //   2. If it's not available, it's added to missing requests playlist and it will be downloaded for future events
+        printf("  ->  Song requested: %s - %s\n", song_request.title, song_request.artist);
         pthread_mutex_lock(&mtx);
         int requested = request_song(song_request);
         pthread_mutex_unlock(&mtx);
+
         if (requested < -1)
         {
             // send: Error
@@ -112,34 +107,31 @@ void *clientThread(void *arg)
             send(sockfd, SONG_UNAVAILABLE_MSG, 5, 0);
         }
     }
-    else if (strcmp(msg, "NOW") == 0)
+    // HANDSHAKE
+    else if (strcmp(msg, "HANDSHAKE") == 0)
     {
-        // REQUEST: Now playing
-        // TODO: Get latest song from QUERY_TABLE
-    }
-    else
-    {
-        printf("-> DEBUG: Unknown requrest %s\n", msg);
+        recv(sockfd, msg, PACKAGE_LEN, 0);
+        send(sockfd, "OK", 2, 0);
     }
 
-    printf("-> DEBUG: Closing socket, ending thread.\n");
     close(sockfd);
-
     return 0;
 }
 
-// void *start_party(struct sockaddr_in *server_addr)
 void *start_party(void *addr)
 {
+    // Signal Handler for socket closing in case of sudden exit
     signal(SIGINT, handle_sigint);
+
     struct sockaddr_in *server_addr = ((struct sockaddr_in*) addr);
+
     // Bind the address struct to the socket
     if (bind(sockfd, (struct sockaddr *)server_addr, sizeof(*server_addr)) != 0)
-        printf("\nError occured while binding socket.\n");
+        perror("\nError binding socket.\n");
 
     // Listen for upcoming requests and start thread with socket connection for every client
-    printf("\nWaiting for guests...\n");
-    if (listen(sockfd, MAX_CLIENT_REQUESTS) != 0)
+    printf("o.O  Waiting for guests...  O.o\n");
+    if (listen(sockfd, MAX_REQUESTS) != 0)
     {
         perror("\nCannot listen");
         return NULL;
@@ -148,16 +140,25 @@ void *start_party(void *addr)
     int i = 0;
     while (1)
     {
-        // TODO: Decrease number of connections when a client disconnects and vice versa
-        // TODO: Make clients_con into a list, so that deleting / appending can be optimized
-
+        if (i > MAX_REQUESTS) {
+            printf("Requests limit exceeded! Cannot create new socket.\n");
+            break;
+        }
         // Create socket + thread for every connection
         socklen_t addr_size = sizeof server_addr;
         int clientSocket = accept(sockfd, (struct sockaddr *)&server_addr, &addr_size);
 
-        if (pthread_create(&clients_con[i++], NULL, clientThread, &clientSocket) != 0)
-            printf("\nCannot create socket for client\n");
+        if (clientSocket > 0)
+        {
+            if (pthread_create(&clients_con[i++], NULL, clientThread, &clientSocket) != 0)
+                printf("\nCannot create socket for client\n");
+        }
+        else
+        {
+            break;
+        }
     }
+    pthread_exit(NULL);
 }
 
 int main()
@@ -182,24 +183,34 @@ int main()
     // -------------------------------------------------------
     // MAIN MENU
     // -------------------------------------------------------
-    short menu_choice;
+    int menu_choice;
     while (1)
     {
         if (PARTY_STARTED == 1)
         {
-            printf("\t1.End party\n");
-            printf("\t2. Show requested songs\n");
-            printf("\t3. Play next requested song\n");
+            printf("+------------------------------------------+\n");
+            printf("|                  MENU                    |\n");
+            printf("+------------------------------------------+\n");
+            printf("|  1. End party                            |\n");
+            printf("|  2. Requested songs                      |\n");
+            printf("|  3. Play next requested song             |\n");
+            printf("+------------------------------------------+\n");
 
             printf("Choice: ");
-            scanf("%hd", &menu_choice);
-            while ((getchar()) != '\n');
+            scanf(" %d", &menu_choice);
+            // while ((getchar()) != '\n');
 
             switch (menu_choice)
             {
                 case 1:
                     // pthread_join(party_thread, 0);
-                    pthread_kill(party_thread, SIGINT);
+                    // pthread_kill(party_thread, SIGINT);
+                    // getSO_ERROR(sockfd);
+                    // if (shutdown(sockfd, SHUT_RDWR) < 0)
+                    //     perror("Shutdown");
+                    if (close(sockfd) < 0)
+                        perror("Close");
+                    PARTY_STARTED = 0;
 
                     // pthread_join(player_thread, 0);
                     break;
@@ -207,7 +218,7 @@ int main()
                     show_query();
                     break;
                 case 3:
-                    // TODO: play_next_request();
+                    play_next_request();
                     break;
                 default:
                     printf("Invalid choice.\n");
@@ -215,15 +226,19 @@ int main()
         }
         else
         {
-            printf("\t1. Start party\n");
-            printf("\t2. Add new song\n");
-            printf("\t3. Show all songs\n");
-            printf("\t4. Show missing songs\n");
-            printf("\t5. Download requested missing songs\n");
+            printf("+------------------------------------------+\n");
+            printf("|                  MENU                    |\n");
+            printf("+------------------------------------------+\n");
+            printf("|  1. Start party                          |\n");
+            printf("|  2. Add new song                         |\n");
+            printf("|  3. Show all songs                       |\n");
+            printf("|  4. Show missing songs                   |\n");
+            printf("|  5. Download requested missing songs     |\n");
+            printf("+------------------------------------------+\n");
 
             printf("Choice: ");
-            scanf("%hd", &menu_choice);
-            while ((getchar()) != '\n');
+            scanf(" %d", &menu_choice);
+            // while ((getchar()) != '\n');
 
             switch (menu_choice)
             {
@@ -231,7 +246,7 @@ int main()
                 PARTY_STARTED = 1;
                 pthread_create(&party_thread, NULL, start_party, &server_addr);
                 // pthread_create(&player_thread, NULL, start_player, NULL);
-                printf("Party started!\n");
+                printf("\\m/  Party started!  \\m/\n");
                 sleep(1);
                 break;
             case 2:
