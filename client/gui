@@ -27,7 +27,7 @@ def init_app():
             label.pack()
 
 
-    def handle_now_playing_but(event):
+    def handle_next_playing_but(event):
         # TODO
         pass
 
@@ -35,7 +35,7 @@ def init_app():
 
     # WELCOME LABEL
     lbl_welcome = tk.Label(
-        text="Welcome to ModernCLUB",
+        text="Welcome to FutureCLUB",
         fg="white",
         bg="black",
         width=30,

@@ -12,4 +12,6 @@ int get_line(char *prmpt, char *buff, size_t sz);
 
 void clearBuffer(char *buf, int charlen);
 
+void print_intro();
+
 #endif /* HELPER_MODULE */
